@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dutch Expert Spelling</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: #fcfcfc;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.2s;
+        }
+        body.correct { background-color: #e8f5e9; }
+        body.wrong { background-color: #ffebee; }
+
+        #score-container { position: absolute; top: 10vh; text-align: center; }
+        #score { font-size: 3rem; font-weight: 900; color: #2c3e50; }
+        
+        #card-container {
+            display: flex;
+            gap: 15px;
+            width: 90vw;
+            max-width: 450px;
+        }
+
+        .spelling-card {
+            flex: 1;
+            height: 160px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        .spelling-card:active { transform: scale(0.98); }
+
+        .pop { animation: pop 0.3s ease; }
+        @keyframes pop { 50% { transform: scale(1.1); } }
+        .shake { animation: shake 0.3s ease; }
+        @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+    </style>
+</head>
+<body>
+
+<div id="score-container">
+    <span style="font-size: 3rem;font-weight: 900;">Score: </span><span id="score">0</span>
+</div>
+
+<div id="card-container">
+    <div id="card-0" class="spelling-card" onclick="checkAnswer(0)"></div>
+    <div id="card-1" class="spelling-card" onclick="checkAnswer(1)"></div>
+</div>
+
+<script>
+const dutchWords = [
+    "voorwoord", "herziene druk", "destijds",
+    "verschillende", "getrouwd", "de bruiloft",
+    "het huwelijk", "bespreek", "beslissen",
+    "betekent", "weleens", "soms", "naartoe",
+    "buurlanden", "de buren", "buurvrow",
+    "buurman", "ligt", "de richting",
+    "de oosten", "de zuiden", "de noorden",
+    "de westem", "vierkant", "de cirkel",
+    "de rechthoek", "de driehoek", "de ovaal",
+    "lang", "breed", "hoogte", "korte",
+    "groot", "de rivier", "de meer",
+    "de dijk", "de duinen", "de polder",
+    "de zee", "klein", "hoofd", "hoofdstad",
+    "steden", "het dorp", "minder", "meer",
+    "het vliegveld", "de haven", "heet",
+    "hoordt", "de regering", "de overheid",
+    "toren", "hoogte", "de rivieren",
+    "dicht gemaakt", "dijk", "polders",
+    "laagland", "bergen", "punt", "duinen",
+    "beschermen", "tegen", "zulke", "zich",
+    "wisselvallig", "het seizoen", "de lente",
+    "de herfst", "de winter", "de zomer",
+    "vriest", "ongeveer", "helder", "donker",
+    "de bladeren", "de bloemen", "de bomen",
+    "de planten", "schijnt", "de wolk",
+    "bewolkt", "waait", "de bevolking",
+    "dichtbevolkt", "nergens", "ergens",
+    "moeilijker", "makkelijker", "mogelijk",
+    "snelwegen", "de file", "gastarbeiders",
+    "de gasten", "vooral", "vluchtelingen",
+    "vergunning", "belangrijkste", "het heelal",
+    "de zon", "de maan", "de wolk",
+    "de lucht", "de hemel", "de regenboog",
+    "de regen", "de ster", "de planeet",
+    "de aarde", "stemmen", "het geloof",
+    "het parlement", "gewoontjes", "vieren",
+    "het feest", "dood", "stierf", "het verlies",
+    "vasten", "liefde", "lief zon", "wereldoorlog",
+    "het vuurwerk", "de brand", "brand blusser",
+    "het vuur", "de verjaardag", "duur",
+    "goedkoop", "moeilijk", "makkelijk",
+    "vaak", "bijna", "ongeveer", "ook",
+    "die", "enzovoort", "bijvoorbeeld",
+    "niets", "iets", "al", "altijd",
+    "nooit", "ooit", "allemaal", "helemaal",
+    "veel", "iedereen", "iemand", "nog",
+    "keer", "maar", "meestal", "weer",
+    "snoep", "volwassen", "gezellig",
+    "draag/draagt/dragen", "merk", "versierd",
+    "vier/viert/vieren", "verhalen", "liedjes",
+    "bezig/druk", "gek", "de taart",
+    "de kaas", "kaarsjes", "zaal",
+    "uitnodiging", "rust", "geslaagd",
+    "doodgegaan", "kennisen", "begrafenis",
+    "paar", "schamen", "sterkte", "sturen",
+    "beterschap", "wandelen", "op passen",
+    "solliciatiegesbreek", "cadeutjes",
+    "cadeaubon", "de beurt", "zoenen",
+    "aanraken", "aan kijken", "weer weggaan",
+    "last van elkaar", "in elk geval",
+    "rustig", "zachter", "vervelend",
+    "wachtkamer", "roept", "boos", "blij",
+    "verdrietig", "bang", "gevoelens",
+    "verrasing", "vriendelijk", "trekken",
+    "duwen", "de opleiding", "het onderwijs",
+    "opvoeding", "ontwinkelling",
+    "basisonderwijs", "voorgezetonderwijs",
+    "de gewoonte", "het geloof", "Zorg",
+    "het abonnement", "rekening",
+    "handtekening", "tekening", "tegen",
+    "een paar", "de tolk", "de vertaler",
+    "de taal", "de klacht", "tevreden",
+    "het aan melden", "gebeuren", "het gebouw",
+    "de onderzoek", "het alarmnummer",
+    "de belasting", "the bibiliotheek",
+    "het verzekering", "de bijdrage",
+    "de bloeddruk", "het etiket",
+    "het recept", "het medicijn",
+    "het identiteitsbewijs", "de koorts",
+    "de griep", "de seks", "de soa",
+    "de spoediesende hulp", "verplicht",
+    "verslaafd", "zwanger", "de dierentuin",
+    "de boederij", "het strand", "het lid",
+    "bewegen", "veilige seks", "slikt",
+    "dodelijk", "bederven", "gaar",
+    "kans", "kies", "polikliniek",
+    "de afdeling", "snel hulp",
+    "de snelweg", "hoog", "laag",
+    "pijn", "kiespijn", "het lichaam"
+];
+
+
+    let score = 0;
+    let correctIndex = 0;
+
+    function generateRealisticWrongSpelling(word) {
+        let chars = word.split("");
+        const type = Math.random();
+
+        // Strategy 1: Swap neighbors (e.g., 'dorp' -> 'drop')
+        if (type < 0.3 && word.length > 3) {
+            let i = Math.floor(Math.random() * (word.length - 1));
+            if (chars[i] !== " " && chars[i+1] !== " ") {
+                [chars[i], chars[i+1]] = [chars[i+1], chars[i]];
+            }
+        } 
+        // Strategy 2: Double or Single Vowels/Consonants (e.g., 'familie' -> 'fammilie')
+        else if (type < 0.7) {
+            let i = Math.floor(Math.random() * word.length);
+            if (chars[i] !== " ") {
+                // If current and next are same, remove one
+                if (chars[i] === chars[i+1]) {
+                    chars.splice(i, 1);
+                } else {
+                    // Otherwise, double the current one
+                    chars.splice(i, 0, chars[i]);
+                }
+            }
+        }
+        // Strategy 3: Common character replacement (e.g., 's' -> 'z', 'd' -> 't')
+        else {
+            const subs = { 's':'z', 'z':'s', 'd':'t', 't':'d', 'f':'v', 'v':'f', 'ij':'ei', 'ei':'ij' };
+            for (let i = 0; i < chars.length; i++) {
+                if (subs[chars[i]]) {
+                    chars[i] = subs[chars[i]];
+                    break; 
+                }
+            }
+        }
+
+        let wrongWord = chars.join("");
+        // Ensure it's actually different; if not, retry once
+        return (wrongWord === word) ? word + "e" : wrongWord;
+    }
+
+    function nextRound() {
+        const correctWord = dutchWords[Math.floor(Math.random() * dutchWords.length)];
+        const wrongWord = generateRealisticWrongSpelling(correctWord);
+        
+        correctIndex = Math.random() > 0.5 ? 1 : 0;
+        const cards = [document.getElementById('card-0'), document.getElementById('card-1')];
+
+        cards[correctIndex].textContent = correctWord;
+        cards[1 - correctIndex].textContent = wrongWord;
+    }
+
+    function checkAnswer(index) {
+        const scoreEl = document.getElementById('score');
+        if (index === correctIndex) {
+            score++;
+            document.body.className = 'correct';
+            scoreEl.classList.add('pop');
+        } else {
+            score = Math.max(0, score - 1);
+            document.body.className = 'wrong';
+            scoreEl.classList.add('shake');
+        }
+        scoreEl.textContent = score;
+
+        setTimeout(() => {
+            document.body.className = '';
+            scoreEl.classList.remove('pop', 'shake');
+            nextRound();
+        }, 400);
+    }
+
+    nextRound();
+</script>
+</body>
+</html>
