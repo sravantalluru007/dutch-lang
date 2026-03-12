@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dutch Infinite Swipe</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #fcfcfc;
+            color: #333;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+        body.correct-flash { background: #d4edda !important; }
+        body.wrong-flash { background: #f8d7da !important; }
+
+        #score-board { margin-top:10px; top:0; font-size: 2rem; font-weight: 900; color: #444; position: absolute; }
+        #game-container { position: relative; width: 320px; height: 400px; display: flex; align-items: center; justify-content: center; }
+
+        .side-label {
+            position: absolute; top: -60px; width: 48%; padding: 10px;
+            font-weight: bold; font-size: 0.8rem; text-align: center;
+            border-radius: 8px; background: #fff; border: 1px solid #ddd;
+            text-transform: uppercase; pointer-events: none;
+        }
+        #label-left { left: 0; color: #d9534f; }
+        #label-right { right: 0; color: #5cb85c; }
+
+        .card {
+            width: 100%; height: 100%; background: #ffffff;
+            border: 1px solid #eee; border-radius: 25px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            cursor: grab; user-select: none; touch-action: none;
+            padding:40%;
+            padding-right:80%;
+            padding-left:80%;
+            margin-left: -30%;
+        }
+        .card h2 { font-size: 2rem; color: #222; pointer-events: none; padding: 20px; text-align: center; }
+        
+        .bump { transform: scale(1.2); transition: 0.2s; }
+        .shake { animation: shake 0.3s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+    </style>
+</head>
+<body>
+
+<div id="score-board">SCORE: <span id="score">0</span></div>
+
+<div id="game-container">
+    <div id="label-left" class="side-label"></div>
+    <div id="label-right" class="side-label"></div>
+    <div id="card-stack"></div>
+</div>
+
+<script>
+    // Initial words with weights (higher weight = more frequent)
+    let wordPool = [
+        { dutch: "voorwoord", english: "Preface", weight: 1 },
+        { dutch: "herziene druk", english: "revised edition", weight: 1 },
+        { dutch: "destijds", english: "at that time", weight: 1 },
+        { dutch: "verschillende", english: "different", weight: 1 },
+        { dutch: "getrouwd", english: "married", weight: 1 },
+        { dutch: "de bruiloft", english: "wedding", weight: 1 },
+        { dutch: "het huwelijk", english: "marriage", weight: 1 },
+        { dutch: "bespreek", english: "discuss", weight: 1 },
+        { dutch: "de familie", english: "family", weight: 1 },
+        { dutch: "het dorp", english: "village", weight: 1 }
+    ];
+
+    let score = 0;
+    let currentWord = null;
+    let correctSide = "";
+
+    // Picks a word based on its weight
+    function getWeightedWord() {
+        const totalWeight = wordPool.reduce((acc, w) => acc + w.weight, 0);
+        let random = Math.random() * totalWeight;
+        for (let word of wordPool) {
+            if (random < word.weight) return word;
+            random -= word.weight;
+        }
+        return wordPool[0];
+    }
+
+    function createCard() {
+        const stack = document.getElementById('card-stack');
+        stack.innerHTML = "";
+        
+        currentWord = getWeightedWord();
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h2>${currentWord.dutch}</h2>`;
+        
+        const isCorrectOnRight = Math.random() > 0.5;
+        let wrongWord;
+        do { 
+            wrongWord = wordPool[Math.floor(Math.random() * wordPool.length)].english;
+        } while (wrongWord === currentWord.english);
+
+        const labelL = document.getElementById('label-left');
+        const labelR = document.getElementById('label-right');
+        
+        if (isCorrectOnRight) {
+            labelL.textContent = wrongWord;
+            labelR.textContent = currentWord.english;
+            correctSide = "right";
+        } else {
+            labelL.textContent = currentWord.english;
+            labelR.textContent = wrongWord;
+            correctSide = "left";
+        }
+
+        stack.appendChild(card);
+        initSwipe(card);
+    }
+
+    function initSwipe(card) {
+        let startX = 0, isDragging = false;
+        card.onpointerdown = (e) => {
+            isDragging = true; startX = e.clientX;
+            card.setPointerCapture(e.pointerId);
+            card.style.transition = 'none';
+        };
+        card.onpointermove = (e) => {
+            if (!isDragging) return;
+            const x = e.clientX - startX;
+            card.style.transform = `translateX(${x}px) rotate(${x/15}deg)`;
+        };
+        card.onpointerup = (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            const diffX = e.clientX - startX;
+            if (Math.abs(diffX) > 110) {
+                handleSwipe(diffX > 0 ? 'right' : 'left', card);
+            } else {
+                card.style.transition = 'transform 0.3s ease';
+                card.style.transform = 'translateX(0) rotate(0)';
+            }
+        };
+    }
+
+    function handleSwipe(side, card) {
+        const scoreBoard = document.getElementById('score-board');
+        
+        if (side === correctSide) {
+            score++;
+            document.getElementById('score').textContent = score;
+            document.body.classList.add('correct-flash');
+            scoreBoard.classList.add('bump');
+            // Decrease weight if correct (appears less often)
+            if (currentWord.weight > 1) currentWord.weight -= 1;
+        } else {
+            document.body.classList.add('wrong-flash');
+            scoreBoard.classList.add('shake');
+            // Increase weight if wrong (appears more often)
+            currentWord.weight += 3;
+        }
+
+        card.style.transition = 'transform 0.5s ease-out';
+        card.style.transform = `translateX(${side === 'right' ? 1000 : -1000}px) rotate(${side === 'right' ? 45 : -45}deg)`;
+        
+        setTimeout(() => {
+            document.body.classList.remove('correct-flash', 'wrong-flash');
+            scoreBoard.classList.remove('bump', 'shake');
+            createCard();
+        }, 400);
+    }
+
+    createCard();
+</script>
+</body>
+</html>

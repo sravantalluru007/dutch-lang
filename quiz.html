@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dutch Vocabulary Trainer</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f2f5;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    .card {
+        background: white;
+        width: 90%;
+        max-width: 450px;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .word {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .options button {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        cursor: pointer;
+        background: #e9ecef;
+    }
+
+    .options button.correct {
+        background: #28a745;
+        color: white;
+    }
+
+    .options button.wrong {
+        background: #dc3545;
+        color: white;
+    }
+
+    .score {
+        margin-top: 20px;
+        font-size: 18px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Dutch Vocabulary Quiz</h1>
+
+<div class="card">
+    <div class="word" id="word"></div>
+    <div class="options" id="options"></div>
+    <div class="score" id="score"></div>
+</div>
+
+<script>
+// Each word now has a "strength" score.
+// Lower strength = appears more often.
+let words = [
+    { dutch: "voorwoord", english: "Preface", strength: 1 },
+    { dutch: "herziene druk", english: "revised edition", strength: 1 },
+    { dutch: "destijds", english: "at that time", strength: 1 },
+    { dutch: "verschillende", english: "different", strength: 1 },
+    { dutch: "getrouwd", english: "married", strength: 1 },
+    { dutch: "de bruiloft", english: "wedding", strength: 1 },
+    { dutch: "het huwelijk", english: "marriage", strength: 1 },
+    { dutch: "bespreek", english: "discuss", strength: 1 },
+    { dutch: "de familie", english: "family", strength: 1 },
+    { dutch: "het dorp", english: "village", strength: 1 }
+];
+
+let score = 0;
+let total = 0;
+
+// Weighted random selection based on strength
+function pickWord() {
+    let weightedList = [];
+
+    words.forEach(w => {
+        let weight = Math.max(1, 5 - w.strength); 
+        for (let i = 0; i < weight; i++) {
+            weightedList.push(w);
+        }
+    });
+
+    return weightedList[Math.floor(Math.random() * weightedList.length)];
+}
+
+function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+}
+
+function loadQuestion() {
+    document.getElementById("options").innerHTML = "";
+
+    let word = pickWord();
+    document.getElementById("word").textContent = word.dutch;
+
+    let choices = shuffle([
+        word.english,
+        ...shuffle(words.filter(w => w !== word)).slice(0, 3).map(w => w.english)
+    ]);
+
+    choices.forEach(choice => {
+        let btn = document.createElement("button");
+        btn.textContent = choice;
+
+        btn.onclick = () => {
+            total++;
+
+            if (choice === word.english) {
+                score++;
+                word.strength = Math.min(5, word.strength + 1);
+                btn.classList.add("correct");
+            } else {
+                word.strength = Math.max(1, word.strength - 1);
+                btn.classList.add("wrong");
+            }
+
+            console.log("Weak words:", words.filter(w => w.strength < 3));
+
+            setTimeout(loadQuestion, 700);
+            updateScore();
+        };
+
+        document.getElementById("options").appendChild(btn);
+    });
+}
+
+function updateScore() {
+    document.getElementById("score").textContent =
+        `Score: ${score} / ${total}`;
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
